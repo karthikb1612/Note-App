@@ -1,16 +1,13 @@
 package com.example.noteapp
 
-import android.app.Application
+
 import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -31,7 +27,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -43,25 +38,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
-import kotlinx.coroutines.delay
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.text.toUpperCase
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,32 +60,39 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NoteApp(noteViewModel: NoteViewModel= viewModel(factory = ViewModelProvider.AndroidViewModelFactory(LocalContext.current.applicationContext as Application))){
+fun NoteApp(noteViewModel: NoteViewModel) {
     var title by rememberSaveable { mutableStateOf("") }
     var content by rememberSaveable { mutableStateOf("") }
-    val notes by noteViewModel.notes.observeAsState(emptyList())
-    val timestamp = LocalContext.current
+    val notes by noteViewModel.getAllDate.observeAsState(emptyList())
     val context = LocalContext.current
+
+    var editingNote by remember { mutableStateOf<Note?>(null) }
+
     Box(
         modifier = Modifier.fillMaxSize()
-    ){
-        Image(
-            painter = painterResource(id = R.drawable.img),
-            contentDescription = "Background Image",
-            contentScale = ContentScale.FillHeight,
-            modifier = Modifier.fillMaxSize()
-        )
+    ) {
+//        Image(
+//            painter = painterResource(id = R.drawable.img),
+//            contentDescription = "Background Image",
+//            contentScale = ContentScale.FillHeight,
+//            modifier = Modifier.fillMaxSize()
+//        )
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
-                Text("NOTE ",
+                Text(
+                    "NOTE ",
                     fontWeight = FontWeight.Bold, fontSize = 35.sp,
-                    color = Color(0xFF6650a4))
-                Text("APP",
-                    fontWeight = FontWeight.Bold, fontSize = 20.sp,
-                    color = Color.Black)
+                    color = Color(0xFFEA034C)
+                )
+                Text(
+                    "APP",
+                    fontWeight = FontWeight.Bold, fontSize = 24.sp,
+                    color = Color(0xFF0E0D0D)
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -121,89 +115,100 @@ fun NoteApp(noteViewModel: NoteViewModel= viewModel(factory = ViewModelProvider.
             FloatingActionButton(
                 onClick = {
                     if (title.isNotEmpty() && content.isNotEmpty()) {
-                        noteViewModel.addNote(title, content)
+                        if (editingNote != null) {
+                            val updatedNote = editingNote!!.copy(
+                                title = title,
+                                content = content,
+                                timestamp = SimpleDateFormat(
+                                    "yyyy-MM-dd hh:mm a",
+                                    Locale.getDefault()
+                                ).format(Date())
+                            )
+                            noteViewModel.updateNote(updatedNote)
+                            editingNote = null
+                        } else {
+                            noteViewModel.addNote(title, content)
+                        }
                         title = ""
                         content = ""
                     }
                 },
                 modifier = Modifier.width(100.dp),
-                contentColor = Color.LightGray,
-                containerColor = Color(0xFF7D5260)
+                contentColor = Color.White,
+                containerColor = Color(0xFFEA034C)
             ) {
-                Text("Add Note")
+                Text(if (editingNote != null) "Update" else "Add Note")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             LazyColumn {
-                items(notes, key = {it.id}) { note ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            elevation = CardDefaults.cardElevation(4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.LightGray
-                            )
+                items(notes, key = { it.id }) { note ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .combinedClickable(
+                                onClick = { /* Single click - no action */ },
+                                onDoubleClick = {
+                                    title = note.title
+                                    content = note.content
+                                    editingNote = note
+                                }
+                            ),
+                        elevation = CardDefaults.cardElevation(4.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                                ) {
 
-                                Column(
-                                    modifier = Modifier.weight(1f),
-
-                                ) {
-                                    Text(
-                                        text = " ${note.timestamp} ",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.Black
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = note.title.uppercase(),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF6650a4),
-
-                                    )
-
-                                    Text(text = note.content,
-                                        style = MaterialTheme.typography.bodyLarge, color = Color(0xFF625b71),
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontStyle = FontStyle.Italic)
-
-                                }
-                                IconButton(
-
-                                    onClick = {
-                                        noteViewModel.remove(note)
-                                        val mediaPlayer = MediaPlayer.create(context, R.raw.deletetwo)
-                                        mediaPlayer.start()
-                                        mediaPlayer.setOnCompletionListener {
-                                            mediaPlayer.release()
-
-                                        }
-
-
-                                    }
-                                ) {
-                                    Icon(painterResource(
-                                        R.drawable.baseline_delete_24),
-                                        contentDescription = "Delete",
-                                        tint = Color.White,
-
-                                    )
-                                }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    text = " ${note.timestamp.toString().toUpperCase()} ",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = note.title.uppercase(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF041367),
+                                )
+                                Text(
+                                    text = note.content,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color(0xFF380000),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontStyle = FontStyle.Italic
+                                )
                             }
-
+                            IconButton(
+                                onClick = {
+                                    noteViewModel.remove(note)
+                                    val mediaPlayer = MediaPlayer.create(context, R.raw.deletetwo)
+                                    mediaPlayer.start()
+                                    mediaPlayer.setOnCompletionListener {
+                                        mediaPlayer.release()
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.baseline_delete_24),
+                                    contentDescription = "Delete",
+                                    tint = Color.White,
+                                )
+                            }
                         }
                     }
-
-
                 }
-
             }
         }
     }
+}
+
 
