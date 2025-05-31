@@ -1,6 +1,7 @@
 package com.example.noteapp
 
 import android.media.MediaPlayer
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -114,6 +115,7 @@ fun NoteApp(noteViewModel: NoteViewModel) {
                         }
                         title = ""
                         content = ""
+                        Toast.makeText(context, "Note added", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.width(100.dp),
@@ -178,6 +180,7 @@ fun NoteApp(noteViewModel: NoteViewModel) {
                                     mediaPlayer.setOnCompletionListener {
                                         mediaPlayer.release()
                                     }
+                                    Toast.makeText(context,"Note is Deleted", Toast.LENGTH_LONG).show()
                                 }
                             ) {
                                 Icon(
